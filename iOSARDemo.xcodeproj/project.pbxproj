@@ -15,6 +15,8 @@
 		770A82712D12ADE800E848FB /* GeneralExamination.swift in Sources */ = {isa = PBXBuildFile; fileRef = 770A82702D12ADE700E848FB /* GeneralExamination.swift */; };
 		770A82732D12CB2E00E848FB /* BloodRoutineExamination.swift in Sources */ = {isa = PBXBuildFile; fileRef = 770A82722D12CB2E00E848FB /* BloodRoutineExamination.swift */; };
 		7730F26A2D1406630058D789 /* UrineRoutineResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7730F2692D1406630058D789 /* UrineRoutineResult.swift */; };
+		7730F2732D1419240058D789 /* HealthDataCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7730F2722D1419240058D789 /* HealthDataCard.swift */; };
+		7730F2762D1419750058D789 /* UIColor+Hex.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7730F2752D1419750058D789 /* UIColor+Hex.swift */; };
 		77845D1A2D0C110100FAF857 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77845D192D0C110100FAF857 /* AppDelegate.swift */; };
 		77845D1C2D0C110100FAF857 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77845D1B2D0C110100FAF857 /* SceneDelegate.swift */; };
 		77845D212D0C110100FAF857 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 77845D1F2D0C110100FAF857 /* Main.storyboard */; };
@@ -22,7 +24,6 @@
 		77845D262D0C110300FAF857 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 77845D242D0C110300FAF857 /* LaunchScreen.storyboard */; };
 		77845D352D0C173600FAF857 /* HomeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77845D342D0C173600FAF857 /* HomeViewController.swift */; };
 		77845D372D0C17ED00FAF857 /* PDFProcessViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77845D362D0C17ED00FAF857 /* PDFProcessViewController.swift */; };
-		77845D462D0C33C700FAF857 /* FreeAllOBJ.obj in Resources */ = {isa = PBXBuildFile; fileRef = 77845D452D0C33C700FAF857 /* FreeAllOBJ.obj */; };
 		77845D532D0C50D900FAF857 /* HealthReport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77845D502D0C50D900FAF857 /* HealthReport.swift */; };
 		77845D572D10223100FAF857 /* BodyViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77845D562D10223100FAF857 /* BodyViewController.swift */; };
 /* End PBXBuildFile section */
@@ -39,6 +40,8 @@
 		770A82722D12CB2E00E848FB /* BloodRoutineExamination.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BloodRoutineExamination.swift; sourceTree = "<group>"; };
 		7730F2652D13FFA80058D789 /* iOSARDemo-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "iOSARDemo-Bridging-Header.h"; sourceTree = "<group>"; };
 		7730F2692D1406630058D789 /* UrineRoutineResult.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UrineRoutineResult.swift; sourceTree = "<group>"; };
+		7730F2722D1419240058D789 /* HealthDataCard.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HealthDataCard.swift; sourceTree = "<group>"; };
+		7730F2752D1419750058D789 /* UIColor+Hex.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "UIColor+Hex.swift"; sourceTree = "<group>"; };
 		77845D162D0C110100FAF857 /* iOSARDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iOSARDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		77845D192D0C110100FAF857 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		77845D1B2D0C110100FAF857 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
@@ -48,7 +51,6 @@
 		77845D272D0C110300FAF857 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		77845D342D0C173600FAF857 /* HomeViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HomeViewController.swift; sourceTree = "<group>"; };
 		77845D362D0C17ED00FAF857 /* PDFProcessViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PDFProcessViewController.swift; sourceTree = "<group>"; };
-		77845D452D0C33C700FAF857 /* FreeAllOBJ.obj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = FreeAllOBJ.obj; sourceTree = "<group>"; };
 		77845D502D0C50D900FAF857 /* HealthReport.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HealthReport.swift; sourceTree = "<group>"; };
 		77845D562D10223100FAF857 /* BodyViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BodyViewController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -76,8 +78,17 @@
 		7730F26B2D140A230058D789 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				7730F2722D1419240058D789 /* HealthDataCard.swift */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		7730F2742D1419750058D789 /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+				7730F2752D1419750058D789 /* UIColor+Hex.swift */,
+			);
+			path = Extensions;
 			sourceTree = "<group>";
 		};
 		77845D0D2D0C110100FAF857 = {
@@ -101,6 +112,7 @@
 		77845D182D0C110100FAF857 /* iOSARDemo */ = {
 			isa = PBXGroup;
 			children = (
+				7730F2742D1419750058D789 /* Extensions */,
 				77845D402D0C287300FAF857 /* Models */,
 				77845D2D2D0C127200FAF857 /* ARHealth */,
 				77845D192D0C110100FAF857 /* AppDelegate.swift */,
@@ -133,7 +145,6 @@
 			isa = PBXGroup;
 			children = (
 				770A82622D103E3900E848FB /* ball_girl.usdz */,
-				77845D452D0C33C700FAF857 /* FreeAllOBJ.obj */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -223,7 +234,6 @@
 				77845D232D0C110300FAF857 /* Assets.xcassets in Resources */,
 				77845D212D0C110100FAF857 /* Main.storyboard in Resources */,
 				770A82632D103E3900E848FB /* ball_girl.usdz in Resources */,
-				77845D462D0C33C700FAF857 /* FreeAllOBJ.obj in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -283,7 +293,9 @@
 				770A82712D12ADE800E848FB /* GeneralExamination.swift in Sources */,
 				770A82692D127A5500E848FB /* TesseractViewController.swift in Sources */,
 				770A82732D12CB2E00E848FB /* BloodRoutineExamination.swift in Sources */,
+				7730F2762D1419750058D789 /* UIColor+Hex.swift in Sources */,
 				770A826D2D127DBE00E848FB /* ReportDetailViewController.swift in Sources */,
+				7730F2732D1419240058D789 /* HealthDataCard.swift in Sources */,
 				77845D1C2D0C110100FAF857 /* SceneDelegate.swift in Sources */,
 				770A826B2D127BF900E848FB /* HistoryReportsViewController.swift in Sources */,
 				77845D532D0C50D900FAF857 /* HealthReport.swift in Sources */,

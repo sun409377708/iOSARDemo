@@ -2,50 +2,212 @@ import UIKit
 import SceneKit
 
 class BodyViewController: UIViewController {
-
+    
+    // MARK: - Properties
     private var sceneView: SCNView!
-    private var bodyNode: SCNNode?
+    private var cameraNode: SCNNode!
+    private var bodyNode: SCNNode!
+    private var currentRotation: Float = 0
     private var dataView: UIView!
     private var annotations: [SCNNode] = []  // 存储标注节点
     private var lastHighlightedNode: SCNNode?  // 跟踪上一个高亮的节点
     private var originalMaterials: [SCNNode: [SCNMaterial]] = [:] // 存储原始材质
-
+    
+    // 存储分类后的数据
+    private var generalExams: [HealthMetric] = []   // 一般检查
+    private var bloodRoutine: [HealthMetric] = []   // 血常规
+    private var urineRoutine: [HealthMetric] = []   // 尿常规
+    
+    private enum DataType: Int {
+        case general = 0
+        case blood
+        case urine
+    }
+    
+    // MARK: - UI Components
+    private let segmentedControl: UISegmentedControl = {
+        let items = ["一般检查", "血常规", "尿常规"]
+        let control = UISegmentedControl(items: items)
+        control.selectedSegmentIndex = 0
+        control.backgroundColor = UIColor(white: 1.0, alpha: 0.1)
+        control.selectedSegmentTintColor = UIColor(hex: "#4A90E2")
+        
+        // 设置文字颜色
+        let normalTextAttributes = [NSAttributedString.Key.foregroundColor: UIColor.white.withAlphaComponent(0.7)]
+        let selectedTextAttributes = [NSAttributedString.Key.foregroundColor: UIColor.white]
+        control.setTitleTextAttributes(normalTextAttributes, for: .normal)
+        control.setTitleTextAttributes(selectedTextAttributes, for: .selected)
+        
+        return control
+    }()
+    
+    private let scrollView: UIScrollView = {
+        let scroll = UIScrollView()
+        scroll.backgroundColor = .clear
+        scroll.showsVerticalScrollIndicator = true
+        scroll.showsHorizontalScrollIndicator = false
+        return scroll
+    }()
+    
+    private let stackView: UIStackView = {
+        let stack = UIStackView()
+        stack.axis = .vertical
+        stack.spacing = 8
+        stack.alignment = .fill
+        stack.distribution = .fill
+        return stack
+    }()
+    
     // MARK: - Lifecycle
-
     override func viewDidLoad() {
         super.viewDidLoad()
         setupScene()
+        setupSegmentedControl()
         setupDataView()
         setupGestureRecognizers()
+        loadLatestReport()
+        updateDataDisplay(for: .general)
+        
+        // 添加数据更新通知监听
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleReportUpdate),
+            name: .healthReportUpdated,
+            object: nil
+        )
     }
-
-    override func viewDidLayoutSubviews() {
-        super.viewDidLayoutSubviews()
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+    
+    @objc private func handleReportUpdate() {
+        loadLatestReport()
+        updateDataDisplay(for: DataType(rawValue: segmentedControl.selectedSegmentIndex) ?? .general)
+    }
+    
+    // MARK: - Data Loading
+    private func loadLatestReport() {
+        // 清空现有数据
+        generalExams.removeAll()
+        bloodRoutine.removeAll()
+        urineRoutine.removeAll()
         
-        // 更新渐变层frame
-        if let gradientLayer = view.layer.sublayers?.first as? CAGradientLayer {
-            gradientLayer.frame = view.bounds
-        }
-        
-        // 更新数据视图中的渐变层
-        if let gradientView = dataView.subviews.last {
-            if let gradientLayer = gradientView.layer.sublayers?.first as? CAGradientLayer {
-                gradientLayer.frame = gradientView.bounds
+        // 从 HealthReportManager 获取最新报告
+        if let report = HealthReportManager.shared.getAllReports().first {
+            // 分类数据
+            for metric in report.metrics {
+                switch metric.category {
+                case .general:
+                    generalExams.append(metric)
+                case .blood:
+                    bloodRoutine.append(metric)
+                case .urine:
+                    urineRoutine.append(metric)
+                case .other:
+                    // 根据类型判断
+                    if metric.type.contains("(") && metric.type.contains(")") {
+                        bloodRoutine.append(metric)
+                    } else {
+                        generalExams.append(metric)
+                    }
+                }
             }
+            
+            // 按名称排序
+            bloodRoutine.sort { $0.type < $1.type }
+            urineRoutine.sort { $0.type < $1.type }
+            generalExams.sort { $0.type < $1.type }
         }
     }
-
-    // MARK: - Setup
-
+    
+    // MARK: - Setup UI
+    private func setupSegmentedControl() {
+        view.addSubview(segmentedControl)
+        segmentedControl.translatesAutoresizingMaskIntoConstraints = false
+        segmentedControl.addTarget(self, action: #selector(segmentedControlValueChanged(_:)), for: .valueChanged)
+        
+        NSLayoutConstraint.activate([
+            segmentedControl.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 20),
+            segmentedControl.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            segmentedControl.widthAnchor.constraint(equalToConstant: 200)
+        ])
+    }
+    
+    @objc private func segmentedControlValueChanged(_ sender: UISegmentedControl) {
+        guard let dataType = DataType(rawValue: sender.selectedSegmentIndex) else { return }
+        updateDataDisplay(for: dataType)
+    }
+    
+    private func setupDataView() {
+        // 添加 scrollView
+        view.addSubview(scrollView)
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            scrollView.topAnchor.constraint(equalTo: segmentedControl.bottomAnchor, constant: 16),
+            scrollView.leadingAnchor.constraint(equalTo: view.centerXAnchor),
+            scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+            scrollView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16)
+        ])
+        
+        // 添加 stackView 到 scrollView
+        scrollView.addSubview(stackView)
+        stackView.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            stackView.topAnchor.constraint(equalTo: scrollView.topAnchor),
+            stackView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
+            stackView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
+            stackView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
+            stackView.widthAnchor.constraint(equalTo: scrollView.widthAnchor)
+        ])
+    }
+    
+    private func updateDataDisplay(for type: DataType) {
+        // 清除现有视图
+        stackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        
+        // 根据类型选择数据
+        let metrics: [HealthMetric]
+        switch type {
+        case .general:
+            metrics = generalExams
+        case .blood:
+            metrics = bloodRoutine
+        case .urine:
+            metrics = urineRoutine
+        }
+        
+        // 添加数据卡片
+        for metric in metrics {
+            let card = HealthDataCard(title: metric.type)
+            card.configure(with: metric)
+            stackView.addArrangedSubview(card)
+        }
+    }
+    
+    // MARK: - Scene Setup
     private func setupScene() {
         sceneView = SCNView(frame: view.bounds)
+        
+        // 添加背景图片
+        let backgroundImageView = UIImageView(frame: view.bounds)
+        backgroundImageView.image = UIImage(named: "background2")
+        backgroundImageView.contentMode = .scaleAspectFill
+        view.addSubview(backgroundImageView)
+        view.sendSubviewToBack(backgroundImageView)
+        
+        // 添加半透明遮罩层，增加深度感
+        let overlayView = UIView(frame: view.bounds)
+        overlayView.backgroundColor = UIColor(white: 0, alpha: 0.5)
+        view.addSubview(overlayView)
+        view.sendSubviewToBack(overlayView)
         
         // 创建渐变背景层
         let gradientLayer = CAGradientLayer()
         gradientLayer.frame = view.bounds
         gradientLayer.colors = [
-            UIColor(red: 0.1, green: 0.12, blue: 0.15, alpha: 1.0).cgColor,  // 深蓝灰色
-            UIColor(red: 0.15, green: 0.18, blue: 0.22, alpha: 1.0).cgColor  // 稍浅的蓝灰色
+            UIColor(red: 0.1, green: 0.12, blue: 0.15, alpha: 0.7).cgColor,  // 半透明深蓝灰色
+            UIColor(red: 0.15, green: 0.18, blue: 0.22, alpha: 0.7).cgColor  // 半透明稍浅的蓝灰色
         ]
         gradientLayer.locations = [0.0, 1.0]
         gradientLayer.startPoint = CGPoint(x: 0.0, y: 0.0)
@@ -69,7 +231,7 @@ class BodyViewController: UIViewController {
         camera.zFar = 100
         camera.fieldOfView = 60
 
-        let cameraNode = SCNNode()
+        cameraNode = SCNNode()
         cameraNode.camera = camera
         cameraNode.position = SCNVector3(x: 0, y: 0, z: 3)
         scene.rootNode.addChildNode(cameraNode)
@@ -153,7 +315,7 @@ class BodyViewController: UIViewController {
 
     private func loadUSDZModel() {
         guard let modelURL = Bundle.main.url(forResource: "ball_girl", withExtension: "usdz") else {
-            print("❌ 模型文件未找到")
+            print("")
             return
         }
 
@@ -186,310 +348,16 @@ class BodyViewController: UIViewController {
             // 设置环境光照
             sceneView.scene?.lightingEnvironment.intensity = 1.0
         } catch {
-            print("❌ 加载模型失败: \(error)")
-        }
-    }
-
-    private func setupDataView() {
-        // 创建单个数据视图
-        dataView = createDataView()
-        view.addSubview(dataView)
-        
-        // 设置约束
-        dataView.translatesAutoresizingMaskIntoConstraints = false
-        
-        NSLayoutConstraint.activate([
-            dataView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
-            dataView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            dataView.widthAnchor.constraint(equalToConstant: 200)
-        ])
-        
-        // 添加所有数据
-        addHealthDataToView()
-    }
-    
-    private func createDataView() -> UIView {
-        let containerView = UIView()
-        
-        // 创建模糊效果
-        let blurEffect = UIBlurEffect(style: .dark)
-        let blurView = UIVisualEffectView(effect: blurEffect)
-        blurView.translatesAutoresizingMaskIntoConstraints = false
-        containerView.addSubview(blurView)
-        
-        // 添加渐变层
-        let gradientLayer = CAGradientLayer()
-        gradientLayer.colors = [
-            UIColor(white: 1.0, alpha: 0.1).cgColor,
-            UIColor(white: 1.0, alpha: 0.05).cgColor
-        ]
-        gradientLayer.locations = [0.0, 1.0]
-        gradientLayer.startPoint = CGPoint(x: 0.0, y: 0.0)
-        gradientLayer.endPoint = CGPoint(x: 0.0, y: 1.0)
-        
-        // 创建一个用于渐变的视图
-        let gradientView = UIView()
-        gradientView.translatesAutoresizingMaskIntoConstraints = false
-        gradientView.layer.addSublayer(gradientLayer)
-        containerView.addSubview(gradientView)
-        
-        // 设置圆角和阴影
-        containerView.layer.cornerRadius = 15
-        containerView.layer.masksToBounds = false
-        containerView.layer.shadowColor = UIColor.black.cgColor
-        containerView.layer.shadowOffset = CGSize(width: 0, height: 4)
-        containerView.layer.shadowRadius = 8
-        containerView.layer.shadowOpacity = 0.3
-        
-        // 约束设置
-        NSLayoutConstraint.activate([
-            blurView.topAnchor.constraint(equalTo: containerView.topAnchor),
-            blurView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
-            blurView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
-            blurView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor),
-            
-            gradientView.topAnchor.constraint(equalTo: containerView.topAnchor),
-            gradientView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
-            gradientView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
-            gradientView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
-        ])
-        
-        // 确保渐变层大小随视图改变
-        containerView.layer.masksToBounds = true
-        
-        return containerView
-    }
-    
-    private func addHealthDataToView() {
-        // 合并所有数据，添加一些异常值测试
-        let healthData: [(title: String, value: Float, maxValue: Float, icon: String)] = [
-            ("心率", 120, 200, "❤️"),     // 偏高
-            ("血压", 85, 200, "🫀"),      // 偏低
-            ("血糖", 6.8, 10, "🔴"),      // 偏高
-            ("体温", 38.5, 45, "🌡️"),    // 偏高
-            ("血氧", 93, 100, "💨"),      // 偏低
-            ("压力", 45, 100, "🧠")       // 正常
-        ]
-        
-        // 创建垂直堆叠视图
-        let stackView = UIStackView()
-        stackView.axis = .vertical
-        stackView.spacing = 10
-        stackView.alignment = .fill
-        stackView.distribution = .equalSpacing
-        stackView.translatesAutoresizingMaskIntoConstraints = false
-        
-        // 添加所有数据项
-        for (title, value, maxValue, icon) in healthData {
-            let itemView = createDataItemView(icon: icon, title: title, value: value, maxValue: maxValue)
-            stackView.addArrangedSubview(itemView)
-        }
-        
-        dataView.addSubview(stackView)
-        
-        // 设置堆叠视图约束
-        NSLayoutConstraint.activate([
-            stackView.topAnchor.constraint(equalTo: dataView.topAnchor, constant: 10),
-            stackView.leadingAnchor.constraint(equalTo: dataView.leadingAnchor, constant: 10),
-            stackView.trailingAnchor.constraint(equalTo: dataView.trailingAnchor, constant: -10),
-            stackView.bottomAnchor.constraint(equalTo: dataView.bottomAnchor, constant: -10)
-        ])
-    }
-    
-    // 健康状态枚举
-    private enum HealthStatus {
-        case normal
-        case high
-        case low
-        
-        var color: UIColor {
-            switch self {
-            case .normal: return UIColor(red: 0.4, green: 0.8, blue: 0.4, alpha: 1.0) // 柔和的绿色
-            case .high: return UIColor(red: 0.9, green: 0.3, blue: 0.3, alpha: 1.0)   // 柔和的红色
-            case .low: return UIColor(red: 0.3, green: 0.7, blue: 0.9, alpha: 1.0)    // 柔和的蓝色
-            }
-        }
-        
-        var description: String {
-            switch self {
-            case .normal: return "正常"
-            case .high: return "偏高"
-            case .low: return "偏低"
-            }
-        }
-    }
-    
-    private func getHealthStatus(for title: String, value: Float) -> HealthStatus {
-        switch title {
-        case "心率":
-            if value < 60 { return .low }
-            if value > 100 { return .high }
-        case "血压":
-            if value < 90 { return .low }
-            if value > 140 { return .high }
-        case "血糖":
-            if value < 4.0 { return .low }
-            if value > 6.1 { return .high }
-        case "体温":
-            if value < 36.0 { return .low }
-            if value > 37.2 { return .high }
-        case "血氧":
-            if value < 95 { return .low }
-        case "压力":
-            if value > 80 { return .high }
-        default:
-            break
-        }
-        return .normal
-    }
-    
-    private func createDataItemView(icon: String, title: String, value: Float, maxValue: Float) -> UIView {
-        let containerView = UIView()
-        containerView.translatesAutoresizingMaskIntoConstraints = false
-        
-        // 图标标签
-        let iconLabel = UILabel()
-        iconLabel.text = icon
-        iconLabel.font = .systemFont(ofSize: 20)
-        iconLabel.translatesAutoresizingMaskIntoConstraints = false
-        
-        // 标题标签
-        let titleLabel = UILabel()
-        titleLabel.text = title
-        titleLabel.textColor = .white
-        titleLabel.font = .systemFont(ofSize: 14, weight: .medium)  // 调整字体粗细
-        titleLabel.translatesAutoresizingMaskIntoConstraints = false
-        titleLabel.numberOfLines = 1  // 确保单行显示
-        titleLabel.adjustsFontSizeToFitWidth = true  // 自动调整字体大小
-        titleLabel.minimumScaleFactor = 0.8  // 最小缩放比例
-        
-        // 数值标签
-        let valueLabel = UILabel()
-        valueLabel.textColor = .white
-        valueLabel.font = .systemFont(ofSize: 14, weight: .medium)
-        valueLabel.translatesAutoresizingMaskIntoConstraints = false
-        valueLabel.setContentHuggingPriority(.required, for: .horizontal)  // 确保数值标签不被压缩
-        
-        // 状态标签
-        let statusLabel = UILabel()
-        statusLabel.font = .systemFont(ofSize: 12)
-        statusLabel.translatesAutoresizingMaskIntoConstraints = false
-        
-        // 进度条背景
-        let progressBackground = UIView()
-        progressBackground.backgroundColor = UIColor.black.withAlphaComponent(0.3)
-        progressBackground.layer.cornerRadius = 3
-        progressBackground.translatesAutoresizingMaskIntoConstraints = false
-        
-        // 给进度条背景添加内发光效果
-        progressBackground.layer.shadowColor = UIColor.white.cgColor
-        progressBackground.layer.shadowOffset = .zero
-        progressBackground.layer.shadowRadius = 1
-        progressBackground.layer.shadowOpacity = 0.1
-        
-        // 进度条
-        let progressView = UIView()
-        progressView.layer.cornerRadius = 3
-        progressView.translatesAutoresizingMaskIntoConstraints = false
-        
-        // 给进度条添加发光效果
-        progressView.layer.shadowColor = UIColor.white.cgColor
-        progressView.layer.shadowOffset = .zero
-        progressView.layer.shadowRadius = 2
-        progressView.layer.shadowOpacity = 0.3
-        
-        // 获取健康状态
-        let status = getHealthStatus(for: title, value: value)
-        progressView.backgroundColor = status.color
-        statusLabel.text = status.description
-        statusLabel.textColor = status.color
-        
-        // 设置数值文本
-        let formattedValue = String(format: "%.1f", value)
-        valueLabel.text = formattedValue
-        
-        // 添加子视图
-        containerView.addSubview(iconLabel)
-        containerView.addSubview(titleLabel)
-        containerView.addSubview(valueLabel)
-        containerView.addSubview(statusLabel)
-        containerView.addSubview(progressBackground)
-        progressBackground.addSubview(progressView)
-        
-        // 设置约束
-        NSLayoutConstraint.activate([
-            containerView.heightAnchor.constraint(equalToConstant: 70),  // 增加容器高度
-            
-            iconLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
-            iconLabel.centerYAnchor.constraint(equalTo: containerView.centerYAnchor),
-            iconLabel.widthAnchor.constraint(equalToConstant: 30),
-            
-            titleLabel.leadingAnchor.constraint(equalTo: iconLabel.trailingAnchor, constant: 8),
-            titleLabel.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 12),  // 增加顶部间距
-            titleLabel.widthAnchor.constraint(lessThanOrEqualToConstant: 80),  // 限制标题宽度
-            
-            valueLabel.leadingAnchor.constraint(equalTo: titleLabel.trailingAnchor, constant: 8),
-            valueLabel.centerYAnchor.constraint(equalTo: titleLabel.centerYAnchor),
-            valueLabel.trailingAnchor.constraint(lessThanOrEqualTo: containerView.trailingAnchor, constant: -8),
-            
-            statusLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
-            statusLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 8),  // 增加间距
-            
-            progressBackground.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
-            progressBackground.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
-            progressBackground.heightAnchor.constraint(equalToConstant: 6),
-            progressBackground.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -12),
-            progressBackground.topAnchor.constraint(equalTo: statusLabel.bottomAnchor, constant: 8)  // 增加间距
-        ])
-        
-        // 进度条宽度约束
-        let progressWidth = progressView.widthAnchor.constraint(equalTo: progressBackground.widthAnchor, multiplier: CGFloat(value / maxValue))
-        progressWidth.isActive = true
-        
-        // 添加进度条其他约束
-        NSLayoutConstraint.activate([
-            progressView.leadingAnchor.constraint(equalTo: progressBackground.leadingAnchor),
-            progressView.topAnchor.constraint(equalTo: progressBackground.topAnchor),
-            progressView.bottomAnchor.constraint(equalTo: progressBackground.bottomAnchor)
-        ])
-        
-        // 添加动画效果
-        progressView.transform = CGAffineTransform(scaleX: 0, y: 1)
-        UIView.animate(withDuration: 2.0,  // 延长动画时间
-                      delay: 0,
-                      usingSpringWithDamping: 0.7,
-                      initialSpringVelocity: 0.3,
-                      options: .curveEaseOut,
-                      animations: {
-            progressView.transform = .identity
-        })
-        
-        // 数值变化动画
-        let initialValue: Float = 0
-        animateValue(label: valueLabel, from: initialValue, to: value, duration: 2.0)  // 延长动画时间
-        
-        return containerView
-    }
-    
-    private func animateValue(label: UILabel, from: Float, to: Float, duration: TimeInterval) {
-        let steps: Int = 20
-        let stepDuration = duration / TimeInterval(steps)
-        let stepValue = (to - from) / Float(steps)
-        
-        for i in 0...steps {
-            DispatchQueue.main.asyncAfter(deadline: .now() + TimeInterval(i) * stepDuration) {
-                let currentValue = from + stepValue * Float(i)
-                label.text = String(format: "%.1f", currentValue)
-            }
+            print(" 加载模型失败: \(error)")
         }
     }
 
     private func setupAdvancedRendering() {
-        // 基础渲染设置
+        // 
         sceneView.antialiasingMode = .multisampling4X
         sceneView.isJitteringEnabled = true
 
-        // 使用 PBR 渲染
+        // PBR 
         sceneView.scene?.lightingEnvironment.contents = UIColor.white
         sceneView.scene?.lightingEnvironment.intensity = 1.0
     }

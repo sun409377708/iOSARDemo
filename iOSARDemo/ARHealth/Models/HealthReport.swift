@@ -126,6 +126,11 @@ enum ReportSource: String, Codable {
     case pdf = "PDF"
 }
 
+// MARK: - Notification Names
+extension Notification.Name {
+    static let healthReportUpdated = Notification.Name("healthReportUpdated")
+}
+
 // MARK: - Storage Manager
 class HealthReportManager {
     static let shared = HealthReportManager()
@@ -140,6 +145,7 @@ class HealthReportManager {
         
         if let encoded = try? JSONEncoder().encode(reports) {
             defaults.set(encoded, forKey: reportsKey)
+            NotificationCenter.default.post(name: .healthReportUpdated, object: nil)
         }
     }
     
@@ -157,10 +163,12 @@ class HealthReportManager {
         
         if let encoded = try? JSONEncoder().encode(reports) {
             defaults.set(encoded, forKey: reportsKey)
+            NotificationCenter.default.post(name: .healthReportUpdated, object: nil)
         }
     }
     
     func clearAllReports() {
         defaults.removeObject(forKey: reportsKey)
+        NotificationCenter.default.post(name: .healthReportUpdated, object: nil)
     }
 }
