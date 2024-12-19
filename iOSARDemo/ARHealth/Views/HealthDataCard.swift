@@ -5,20 +5,20 @@ class HealthDataCard: UIView {
     // MARK: - Properties
     private let containerView: UIView = {
         let view = UIView()
-        view.backgroundColor = UIColor(white: 0.1, alpha: 0.7)
-        view.layer.cornerRadius = 12
+        view.backgroundColor = UIColor(white: 0.1, alpha: 0.8)
+        view.layer.cornerRadius = 16
         view.layer.borderWidth = 1
-        view.layer.borderColor = UIColor(white: 1.0, alpha: 0.1).cgColor
+        view.layer.borderColor = UIColor(hex: "#00F5FF").withAlphaComponent(0.3).cgColor
         
         // 添加内部阴影
         let innerShadow = CALayer()
         innerShadow.frame = view.bounds
         innerShadow.backgroundColor = UIColor.clear.cgColor
-        innerShadow.shadowColor = UIColor.white.cgColor
+        innerShadow.shadowColor = UIColor(hex: "#00F5FF").cgColor
         innerShadow.shadowOffset = CGSize(width: 0, height: 1)
-        innerShadow.shadowOpacity = 0.1
-        innerShadow.shadowRadius = 3
-        innerShadow.cornerRadius = 12
+        innerShadow.shadowOpacity = 0.2
+        innerShadow.shadowRadius = 4
+        innerShadow.cornerRadius = 16
         view.layer.addSublayer(innerShadow)
         
         return view
@@ -27,14 +27,14 @@ class HealthDataCard: UIView {
     private let titleLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 14, weight: .medium)
-        label.textColor = .white.withAlphaComponent(0.9)
+        label.textColor = UIColor(hex: "#00F5FF")
         return label
     }()
     
     private let stackView: UIStackView = {
         let stack = UIStackView()
         stack.axis = .vertical
-        stack.spacing = 8
+        stack.spacing = 12
         stack.alignment = .fill
         stack.distribution = .fill
         return stack
@@ -42,10 +42,14 @@ class HealthDataCard: UIView {
     
     private let glowLayer: CAGradientLayer = {
         let layer = CAGradientLayer()
+        layer.colors = [
+            UIColor(hex: "#00F5FF").withAlphaComponent(0.2).cgColor,
+            UIColor(hex: "#00F5FF").withAlphaComponent(0.05).cgColor
+        ]
+        layer.locations = [0.0, 1.0]
         layer.startPoint = CGPoint(x: 0, y: 0)
         layer.endPoint = CGPoint(x: 1, y: 1)
-        layer.cornerRadius = 12
-        layer.opacity = 0.5
+        layer.cornerRadius = 16
         return layer
     }()
     
@@ -64,15 +68,15 @@ class HealthDataCard: UIView {
     // MARK: - UI Setup
     private func setupUI() {
         backgroundColor = .clear
-        layer.shadowColor = UIColor.black.cgColor
+        layer.shadowColor = UIColor(hex: "#00F5FF").cgColor
         layer.shadowOffset = CGSize(width: 0, height: 2)
         layer.shadowRadius = 8
-        layer.shadowOpacity = 0.3
+        layer.shadowOpacity = 0.2
         
         // Add glow effect
         layer.insertSublayer(glowLayer, at: 0)
         
-        // Setup container view
+        // Setup container view with flexible height
         addSubview(containerView)
         containerView.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
@@ -91,11 +95,11 @@ class HealthDataCard: UIView {
             titleLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -12)
         ])
         
-        // Setup stack view
+        // Setup stack view with flexible height
         containerView.addSubview(stackView)
         stackView.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
-            stackView.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 8),
+            stackView.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 12),
             stackView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 12),
             stackView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -12),
             stackView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -12)
@@ -114,9 +118,9 @@ class HealthDataCard: UIView {
     }
     
     private func updateShadowPath() {
-        layer.shadowPath = UIBezierPath(roundedRect: bounds, cornerRadius: 12).cgPath
-        layer.shadowColor = UIColor(hex: "#4A90E2").cgColor
-        layer.shadowOpacity = 0.5
+        layer.shadowPath = UIBezierPath(roundedRect: bounds, cornerRadius: 16).cgPath
+        layer.shadowColor = UIColor(hex: "#00F5FF").cgColor
+        layer.shadowOpacity = 0.2
         layer.shadowOffset = .zero
         layer.shadowRadius = 8
     }
@@ -173,9 +177,16 @@ class HealthDataCard: UIView {
     func configure(with metric: HealthMetric) {
         titleLabel.text = metric.type
         
-        // 创建并添加指标项
-        let itemView = MetricItemView(metric: metric)
-        stackView.addArrangedSubview(itemView)
+        // 移除现有的视图
+        stackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        
+        // 创建新的度量视图
+        let metricView = MetricItemView(metric: metric)
+        stackView.addArrangedSubview(metricView)
+        
+        // 确保视图能够自适应高度
+        metricView.setContentHuggingPriority(.required, for: .vertical)
+        metricView.setContentCompressionResistancePriority(.required, for: .vertical)
         
         // 更新卡片颜色
         glowLayer.colors = [
@@ -187,31 +198,54 @@ class HealthDataCard: UIView {
 
 // MARK: - MetricItemView
 private class MetricItemView: UIView {
+    private let contentStackView: UIStackView = {
+        let stack = UIStackView()
+        stack.axis = .vertical
+        stack.spacing = 8
+        stack.alignment = .fill
+        stack.distribution = .fill
+        return stack
+    }()
+    
+    private let headerStackView: UIStackView = {
+        let stack = UIStackView()
+        stack.axis = .horizontal
+        stack.spacing = 8
+        stack.alignment = .center
+        stack.distribution = .fill
+        return stack
+    }()
+
     private let titleLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 13, weight: .medium)
-        label.textColor = .white.withAlphaComponent(0.9)
+        label.textColor = UIColor(hex: "#00F5FF").withAlphaComponent(0.9)
         label.adjustsFontSizeToFitWidth = true
-        label.minimumScaleFactor = 0.8
+        label.minimumScaleFactor = 0.6
+        label.numberOfLines = 0
         return label
     }()
     
     private let valueLabel: UILabel = {
         let label = UILabel()
-        label.font = .systemFont(ofSize: 13, weight: .bold)
+        label.font = .systemFont(ofSize: 24, weight: .bold)
         label.textAlignment = .right
         label.adjustsFontSizeToFitWidth = true
-        label.minimumScaleFactor = 0.8
+        label.minimumScaleFactor = 0.6
+        label.setContentHuggingPriority(.required, for: .horizontal)
         return label
     }()
     
     private let referenceLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 11)
-        label.textColor = .white.withAlphaComponent(0.6)
+        label.textColor = UIColor(hex: "#00F5FF").withAlphaComponent(0.6)
+        label.numberOfLines = 0
+        label.adjustsFontSizeToFitWidth = true
+        label.minimumScaleFactor = 0.7
         return label
     }()
-    
+
     init(metric: HealthMetric) {
         super.init(frame: .zero)
         setupUI()
@@ -223,36 +257,89 @@ private class MetricItemView: UIView {
     }
     
     private func setupUI() {
-        // Add labels
-        addSubview(titleLabel)
-        addSubview(valueLabel)
-        addSubview(referenceLabel)
+        // 添加主要的垂直堆栈视图
+        addSubview(contentStackView)
+        contentStackView.translatesAutoresizingMaskIntoConstraints = false
         
-        // Setup constraints
-        titleLabel.translatesAutoresizingMaskIntoConstraints = false
-        valueLabel.translatesAutoresizingMaskIntoConstraints = false
-        referenceLabel.translatesAutoresizingMaskIntoConstraints = false
+        // 添加水平堆栈视图到主堆栈视图
+        contentStackView.addArrangedSubview(headerStackView)
         
+        // 添加标题和值到水平堆栈视图
+        headerStackView.addArrangedSubview(titleLabel)
+        headerStackView.addArrangedSubview(valueLabel)
+        
+        // 添加参考值标签到主堆栈视图
+        if let text = referenceLabel.text, !text.isEmpty {
+            contentStackView.addArrangedSubview(referenceLabel)
+        }
+        
+        // 设置约束
         NSLayoutConstraint.activate([
-            titleLabel.topAnchor.constraint(equalTo: topAnchor),
-            titleLabel.leadingAnchor.constraint(equalTo: leadingAnchor),
-            titleLabel.trailingAnchor.constraint(equalTo: valueLabel.leadingAnchor, constant: -8),
-            
-            valueLabel.topAnchor.constraint(equalTo: topAnchor),
-            valueLabel.trailingAnchor.constraint(equalTo: trailingAnchor),
-            
-            referenceLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 4),
-            referenceLabel.leadingAnchor.constraint(equalTo: leadingAnchor),
-            referenceLabel.trailingAnchor.constraint(equalTo: trailingAnchor),
-            referenceLabel.bottomAnchor.constraint(equalTo: bottomAnchor)
+            contentStackView.topAnchor.constraint(equalTo: topAnchor),
+            contentStackView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            contentStackView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            contentStackView.bottomAnchor.constraint(equalTo: bottomAnchor)
         ])
+        
+        // 设置内容压缩优先级
+        contentStackView.setContentHuggingPriority(.required, for: .vertical)
+        contentStackView.setContentCompressionResistancePriority(.required, for: .vertical)
     }
     
     func configure(with metric: HealthMetric) {
         titleLabel.text = metric.type
-        valueLabel.text = "\(metric.value) \(metric.unit)"
+        
+        // 格式化值和单位
+        let valueText = "\(metric.value) \(metric.unit)"
+        let attributedValue = NSMutableAttributedString(string: valueText)
+        
+        // 为单位设置较小的字体
+        if let unitRange = valueText.range(of: metric.unit) {
+            let nsRange = NSRange(unitRange, in: valueText)
+            attributedValue.addAttribute(.font, value: UIFont.systemFont(ofSize: 16, weight: .medium), range: nsRange)
+        }
+        
+        valueLabel.attributedText = attributedValue
+        
         if !metric.reference.isEmpty {
             referenceLabel.text = "参考范围: \(metric.reference)"
+            referenceLabel.isHidden = false
+            contentStackView.addArrangedSubview(referenceLabel)
+        } else {
+            referenceLabel.isHidden = true
+            referenceLabel.removeFromSuperview()
+        }
+        
+        // 根据内容调整布局
+        setNeedsLayout()
+        layoutIfNeeded()
+        
+        // 检查是否需要缩小字体
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            // 检查标题是否需要缩小字体
+            if self.titleLabel.frame.height > 40 {
+                self.titleLabel.font = .systemFont(ofSize: 11, weight: .medium)
+            }
+            
+            // 检查值是否需要缩小字体
+            if self.valueLabel.frame.width > self.frame.width * 0.4 {
+                if let text = self.valueLabel.attributedText?.string {
+                    let newAttributedValue = NSMutableAttributedString(string: text)
+                    if let unitRange = text.range(of: metric.unit) {
+                        let nsRange = NSRange(unitRange, in: text)
+                        newAttributedValue.addAttribute(.font, value: UIFont.systemFont(ofSize: 13, weight: .medium), range: nsRange)
+                        newAttributedValue.addAttribute(.font, value: UIFont.systemFont(ofSize: 20, weight: .bold), range: NSRange(location: 0, length: nsRange.location))
+                    }
+                    self.valueLabel.attributedText = newAttributedValue
+                }
+            }
+            
+            // 检查参考值是否需要缩小字体
+            if !metric.reference.isEmpty && self.referenceLabel.frame.height > 30 {
+                self.referenceLabel.font = .systemFont(ofSize: 9)
+            }
         }
         
         // Set value label color based on hint

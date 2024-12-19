@@ -7,7 +7,6 @@ class BodyViewController: UIViewController {
     private var sceneView: SCNView!
     private var cameraNode: SCNNode!
     private var bodyNode: SCNNode!
-    private var currentRotation: Float = 0
     private var dataView: UIView!
     private var annotations: [SCNNode] = []  // 存储标注节点
     private var lastHighlightedNode: SCNNode?  // 跟踪上一个高亮的节点
@@ -24,43 +23,78 @@ class BodyViewController: UIViewController {
         case urine
     }
     
-    // MARK: - UI Components
+    
+    private let gridView: UIView = {
+        let view = UIView()
+        view.backgroundColor = .clear
+        
+        // 添加网格渐变
+        let gradientLayer = CAGradientLayer()
+        gradientLayer.colors = [
+            UIColor(hex: "#00F5FF").withAlphaComponent(0.1).cgColor,
+            UIColor(hex: "#00F5FF").withAlphaComponent(0.05).cgColor
+        ]
+        gradientLayer.locations = [0.0, 1.0]
+        view.layer.addSublayer(gradientLayer)
+        
+        // 添加网格线
+        let gridLayer = CAShapeLayer()
+        let path = UIBezierPath()
+        let spacing: CGFloat = 40
+        for x in stride(from: 0, through: UIScreen.main.bounds.width, by: spacing) {
+            path.move(to: CGPoint(x: x, y: 0))
+            path.addLine(to: CGPoint(x: x, y: UIScreen.main.bounds.height))
+        }
+        for y in stride(from: 0, through: UIScreen.main.bounds.height, by: spacing) {
+            path.move(to: CGPoint(x: 0, y: y))
+            path.addLine(to: CGPoint(x: UIScreen.main.bounds.width, y: y))
+        }
+        gridLayer.path = path.cgPath
+        gridLayer.strokeColor = UIColor(hex: "#00F5FF").withAlphaComponent(0.1).cgColor
+        gridLayer.lineWidth = 0.5
+        view.layer.addSublayer(gridLayer)
+        
+        return view
+    }()
+    
     private let segmentedControl: UISegmentedControl = {
         let items = ["一般检查", "血常规", "尿常规"]
         let control = UISegmentedControl(items: items)
         control.selectedSegmentIndex = 0
-        control.backgroundColor = UIColor(white: 1.0, alpha: 0.1)
-        control.selectedSegmentTintColor = UIColor(hex: "#4A90E2")
+        control.backgroundColor = UIColor(hex: "#00F5FF").withAlphaComponent(0.1)
+        control.selectedSegmentTintColor = UIColor(hex: "#00F5FF").withAlphaComponent(0.3)
         
         // 设置文字颜色
-        let normalTextAttributes = [NSAttributedString.Key.foregroundColor: UIColor.white.withAlphaComponent(0.7)]
-        let selectedTextAttributes = [NSAttributedString.Key.foregroundColor: UIColor.white]
+        let normalTextAttributes = [NSAttributedString.Key.foregroundColor: UIColor(hex: "#00F5FF").withAlphaComponent(0.6)]
+        let selectedTextAttributes = [NSAttributedString.Key.foregroundColor: UIColor(hex: "#00F5FF")]
         control.setTitleTextAttributes(normalTextAttributes, for: .normal)
         control.setTitleTextAttributes(selectedTextAttributes, for: .selected)
         
         return control
     }()
     
-    private let scrollView: UIScrollView = {
-        let scroll = UIScrollView()
-        scroll.backgroundColor = .clear
-        scroll.showsVerticalScrollIndicator = true
-        scroll.showsHorizontalScrollIndicator = false
-        return scroll
+    private lazy var scrollView: UIScrollView = {
+        let scrollView = UIScrollView()
+        scrollView.backgroundColor = .clear
+        scrollView.showsVerticalScrollIndicator = false
+        scrollView.contentInset = UIEdgeInsets(top: 0, left: 0, bottom: 16, right: 0)
+        scrollView.alwaysBounceVertical = true
+        return scrollView
     }()
     
-    private let stackView: UIStackView = {
-        let stack = UIStackView()
-        stack.axis = .vertical
-        stack.spacing = 8
-        stack.alignment = .fill
-        stack.distribution = .fill
-        return stack
+    private lazy var stackView: UIStackView = {
+        let stackView = UIStackView()
+        stackView.axis = .vertical
+        stackView.spacing = 16
+        stackView.alignment = .fill
+        stackView.distribution = .fill
+        return stackView
     }()
     
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
+        setupBackground()
         setupScene()
         setupSegmentedControl()
         setupDataView()
@@ -122,6 +156,18 @@ class BodyViewController: UIViewController {
     }
     
     // MARK: - Setup UI
+    private func setupBackground() {
+        
+        // 添加网格视图
+        view.addSubview(gridView)
+        gridView.frame = view.bounds
+        
+        // 更新网格渐变
+        if let gradientLayer = gridView.layer.sublayers?.first as? CAGradientLayer {
+            gradientLayer.frame = view.bounds
+        }
+    }
+    
     private func setupSegmentedControl() {
         view.addSubview(segmentedControl)
         segmentedControl.translatesAutoresizingMaskIntoConstraints = false
@@ -129,8 +175,8 @@ class BodyViewController: UIViewController {
         
         NSLayoutConstraint.activate([
             segmentedControl.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 20),
-            segmentedControl.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            segmentedControl.widthAnchor.constraint(equalToConstant: 200)
+            segmentedControl.leadingAnchor.constraint(equalTo: view.centerXAnchor, constant: 16),
+            segmentedControl.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16)
         ])
     }
     
@@ -145,25 +191,25 @@ class BodyViewController: UIViewController {
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
             scrollView.topAnchor.constraint(equalTo: segmentedControl.bottomAnchor, constant: 16),
-            scrollView.leadingAnchor.constraint(equalTo: view.centerXAnchor),
+            scrollView.leadingAnchor.constraint(equalTo: view.centerXAnchor, constant: 6), // 向左移动10点
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
-            scrollView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16)
+            scrollView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
         ])
         
         // 添加 stackView 到 scrollView
         scrollView.addSubview(stackView)
         stackView.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
-            stackView.topAnchor.constraint(equalTo: scrollView.topAnchor),
-            stackView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
-            stackView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
-            stackView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
-            stackView.widthAnchor.constraint(equalTo: scrollView.widthAnchor)
+            stackView.topAnchor.constraint(equalTo: scrollView.contentLayoutGuide.topAnchor),
+            stackView.leadingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.leadingAnchor),
+            stackView.trailingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.trailingAnchor),
+            stackView.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor),
+            stackView.widthAnchor.constraint(equalTo: scrollView.frameLayoutGuide.widthAnchor)
         ])
     }
     
     private func updateDataDisplay(for type: DataType) {
-        // 清除现有视图
+        // 移除现有的视图
         stackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
         
         // 根据类型选择数据
@@ -182,6 +228,9 @@ class BodyViewController: UIViewController {
             let card = HealthDataCard(title: metric.type)
             card.configure(with: metric)
             stackView.addArrangedSubview(card)
+            
+            // 设置卡片的高度约束为自适应
+            card.heightAnchor.constraint(greaterThanOrEqualToConstant: 80).isActive = true
         }
     }
     
@@ -336,14 +385,17 @@ class BodyViewController: UIViewController {
 
             // 设置模型比例和位置
             modelNode.scale = SCNVector3(0.0125, 0.0125, 0.0125)
-            modelNode.position = SCNVector3(x: -0.5, y: -1.0, z: 0)  // 将模型移到左侧
+            modelNode.position = SCNVector3(x: -0.4, y: -1.0, z: 0)  // 将模型移到左侧
 
             // 添加到场景中
             sceneView.scene?.rootNode.addChildNode(modelNode)
 
-            // 缓慢旋转动画
-            let rotation = SCNAction.repeatForever(SCNAction.rotateBy(x: 0, y: 2 * .pi, z: 0, duration: 15))
-            modelNode.runAction(rotation)
+            // 添加缓慢旋转动画
+            let rotationAnimation = CABasicAnimation(keyPath: "rotation")
+            rotationAnimation.toValue = NSValue(scnVector4: SCNVector4(x: 0, y: 1, z: 0, w: Float.pi * 2))
+            rotationAnimation.duration = 20
+            rotationAnimation.repeatCount = .infinity
+            modelNode.addAnimation(rotationAnimation, forKey: "rotation")
 
             // 设置环境光照
             sceneView.scene?.lightingEnvironment.intensity = 1.0
