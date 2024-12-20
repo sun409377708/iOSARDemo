@@ -5,22 +5,9 @@ class HealthDataCard: UIView {
     // MARK: - Properties
     private let containerView: UIView = {
         let view = UIView()
-        view.backgroundColor = UIColor(white: 0.1, alpha: 0.8)
-        view.layer.cornerRadius = 16
-        view.layer.borderWidth = 1
-        view.layer.borderColor = UIColor(hex: "#00F5FF").withAlphaComponent(0.3).cgColor
-        
-        // 添加内部阴影
-        let innerShadow = CALayer()
-        innerShadow.frame = view.bounds
-        innerShadow.backgroundColor = UIColor.clear.cgColor
-        innerShadow.shadowColor = UIColor(hex: "#00F5FF").cgColor
-        innerShadow.shadowOffset = CGSize(width: 0, height: 1)
-        innerShadow.shadowOpacity = 0.2
-        innerShadow.shadowRadius = 4
-        innerShadow.cornerRadius = 16
-        view.layer.addSublayer(innerShadow)
-        
+        view.backgroundColor = UIColor(white: 0.1, alpha: 0.95)
+        view.layer.cornerRadius = 12
+        view.layer.masksToBounds = true
         return view
     }()
     
@@ -52,6 +39,15 @@ class HealthDataCard: UIView {
         layer.cornerRadius = 16
         return layer
     }()
+    
+    private let circularProgressView: CircularProgressView = {
+        let view = CircularProgressView()
+        view.isHidden = true
+        return view
+    }()
+    
+    // 添加固定高度约束
+    private var heightConstraint: NSLayoutConstraint?
     
     // MARK: - Initialization
     init(title: String) {
@@ -95,6 +91,17 @@ class HealthDataCard: UIView {
             titleLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -12)
         ])
         
+        // Setup circular progress view
+        containerView.addSubview(circularProgressView)
+        circularProgressView.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            circularProgressView.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 12),
+            circularProgressView.centerXAnchor.constraint(equalTo: containerView.centerXAnchor),
+            circularProgressView.widthAnchor.constraint(equalToConstant: 90),
+            circularProgressView.heightAnchor.constraint(equalToConstant: 90),
+            circularProgressView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -12)
+        ])
+        
         // Setup stack view with flexible height
         containerView.addSubview(stackView)
         stackView.translatesAutoresizingMaskIntoConstraints = false
@@ -104,6 +111,10 @@ class HealthDataCard: UIView {
             stackView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -12),
             stackView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -12)
         ])
+        
+        // 创建固定高度约束，默认激活
+        heightConstraint = heightAnchor.constraint(equalToConstant: 140)
+        heightConstraint?.isActive = true
         
         // Add gesture recognizer for touch interaction
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleTap))
@@ -177,6 +188,43 @@ class HealthDataCard: UIView {
     func configure(with metric: HealthMetric) {
         titleLabel.text = metric.type
         
+        switch metric.category {
+        case .blood:
+            // 血常规保持固定高度，尝试显示环形图
+            if let value = Double(metric.value),
+               let range = parseReferenceRange(metric.reference) {
+                circularProgressView.isHidden = false
+                stackView.isHidden = true
+                let cgRange = CGFloat(range.lowerBound)...CGFloat(range.upperBound)
+                circularProgressView.setProgress(CGFloat(value), range: cgRange, unit: metric.unit)
+            } else {
+                circularProgressView.isHidden = true
+                stackView.isHidden = false
+                configureNormalView(with: metric)
+            }
+            heightConstraint?.isActive = true
+            
+        case .general, .urine:
+            // 一般检查和尿常规使用自适应高度
+            circularProgressView.isHidden = true
+            stackView.isHidden = false
+            configureNormalView(with: metric)
+            heightConstraint?.isActive = false
+            
+        @unknown default:
+            // 处理未来可能添加的新类别
+            circularProgressView.isHidden = true
+            stackView.isHidden = false
+            configureNormalView(with: metric)
+            heightConstraint?.isActive = false
+        }
+        
+        // 更新布局
+        setNeedsLayout()
+        layoutIfNeeded()
+    }
+    
+    private func configureNormalView(with metric: HealthMetric) {
         // 移除现有的视图
         stackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
         
@@ -193,6 +241,17 @@ class HealthDataCard: UIView {
             UIColor(hex: metric.color).cgColor,
             UIColor(hex: metric.color).withAlphaComponent(0.6).cgColor
         ]
+    }
+    
+    private func parseReferenceRange(_ reference: String) -> ClosedRange<Double>? {
+        // 解析参考范围字符串，例如 "110-150"
+        let components = reference.components(separatedBy: "-")
+        guard components.count == 2,
+              let min = Double(components[0].trimmingCharacters(in: .whitespaces)),
+              let max = Double(components[1].trimmingCharacters(in: .whitespaces)) else {
+            return nil
+        }
+        return min...max
     }
 }
 

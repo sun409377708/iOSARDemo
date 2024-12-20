@@ -131,44 +131,4 @@ extension Notification.Name {
     static let healthReportUpdated = Notification.Name("healthReportUpdated")
 }
 
-// MARK: - Storage Manager
-class HealthReportManager {
-    static let shared = HealthReportManager()
-    private let defaults = UserDefaults.standard
-    private let reportsKey = "savedHealthReports"
-    
-    private init() {}
-    
-    func saveReport(_ report: HealthReport) {
-        var reports = getAllReports()
-        reports.append(report)
-        
-        if let encoded = try? JSONEncoder().encode(reports) {
-            defaults.set(encoded, forKey: reportsKey)
-            NotificationCenter.default.post(name: .healthReportUpdated, object: nil)
-        }
-    }
-    
-    func getAllReports() -> [HealthReport] {
-        guard let data = defaults.data(forKey: reportsKey),
-              let reports = try? JSONDecoder().decode([HealthReport].self, from: data) else {
-            return []
-        }
-        return reports.sorted { $0.date > $1.date }
-    }
-    
-    func deleteReport(withId id: String) {
-        var reports = getAllReports()
-        reports.removeAll { $0.id == id }
-        
-        if let encoded = try? JSONEncoder().encode(reports) {
-            defaults.set(encoded, forKey: reportsKey)
-            NotificationCenter.default.post(name: .healthReportUpdated, object: nil)
-        }
-    }
-    
-    func clearAllReports() {
-        defaults.removeObject(forKey: reportsKey)
-        NotificationCenter.default.post(name: .healthReportUpdated, object: nil)
-    }
-}
+

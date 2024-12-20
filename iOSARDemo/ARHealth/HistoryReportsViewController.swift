@@ -31,6 +31,23 @@ class HistoryReportsViewController: UIViewController {
         super.viewDidLoad()
         setupUI()
         loadReports()
+        
+        // 添加通知观察者
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleReportUpdate),
+            name: .healthReportUpdated,
+            object: nil
+        )
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+    
+    @objc private func handleReportUpdate() {
+        loadReports()
+        tableView.reloadData()
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -184,23 +201,17 @@ class HistoryReportCell: UITableViewCell {
 
 // MARK: - MetricView
 class MetricView: UIView {
-    private let iconImageView: UIImageView = {
-        let imageView = UIImageView()
-        imageView.tintColor = .systemBlue
-        imageView.contentMode = .scaleAspectFit
-        return imageView
-    }()
-    
     private let typeLabel: UILabel = {
         let label = UILabel()
-        label.font = .systemFont(ofSize: 14)
+        label.font = .systemFont(ofSize: 12)
+        label.textColor = .label
         return label
     }()
     
     private let valueLabel: UILabel = {
         let label = UILabel()
-        label.font = .systemFont(ofSize: 14, weight: .medium)
-        label.textAlignment = .right
+        label.font = .systemFont(ofSize: 12, weight: .medium)
+        label.textColor = .secondaryLabel
         return label
     }()
     
@@ -215,29 +226,33 @@ class MetricView: UIView {
     }
     
     private func setupUI() {
-        [iconImageView, typeLabel, valueLabel].forEach {
-            $0.translatesAutoresizingMaskIntoConstraints = false
-            addSubview($0)
-        }
+        let stackView = UIStackView(arrangedSubviews: [typeLabel, valueLabel])
+        stackView.axis = .horizontal
+        stackView.spacing = 8
+        stackView.distribution = .fillProportionally
         
+        addSubview(stackView)
+        stackView.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
-            iconImageView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            iconImageView.centerYAnchor.constraint(equalTo: centerYAnchor),
-            iconImageView.widthAnchor.constraint(equalToConstant: 20),
-            iconImageView.heightAnchor.constraint(equalToConstant: 20),
-            
-            typeLabel.leadingAnchor.constraint(equalTo: iconImageView.trailingAnchor, constant: 8),
-            typeLabel.centerYAnchor.constraint(equalTo: centerYAnchor),
-            
-            valueLabel.leadingAnchor.constraint(equalTo: typeLabel.trailingAnchor, constant: 8),
-            valueLabel.trailingAnchor.constraint(equalTo: trailingAnchor),
-            valueLabel.centerYAnchor.constraint(equalTo: centerYAnchor)
+            stackView.topAnchor.constraint(equalTo: topAnchor),
+            stackView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            stackView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            stackView.bottomAnchor.constraint(equalTo: bottomAnchor)
         ])
     }
     
     private func configure(with metric: HealthMetric) {
-        iconImageView.image = UIImage(systemName: metric.icon)
         typeLabel.text = metric.type
-        valueLabel.text = metric.displayValue
+        valueLabel.text = "\(metric.value) \(metric.unit)"
+        
+        // 根据提示设置颜色
+        switch metric.hint {
+        case "偏高":
+            valueLabel.textColor = .systemRed
+        case "偏低":
+            valueLabel.textColor = .systemBlue
+        default:
+            valueLabel.textColor = .secondaryLabel
+        }
     }
 }

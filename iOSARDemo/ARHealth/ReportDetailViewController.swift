@@ -1,48 +1,13 @@
 import UIKit
 
-// 自定义 cell 类
-class DetailCell: UITableViewCell {
-    override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
-        super.init(style: .value1, reuseIdentifier: reuseIdentifier)
-    }
-    
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-}
-
 class ReportDetailViewController: UIViewController {
     
-    private let scrollView: UIScrollView = {
-        let scroll = UIScrollView()
-        scroll.backgroundColor = .black
-        scroll.showsVerticalScrollIndicator = false
-        return scroll
+    private let tableView: UITableView = {
+        let table = UITableView(frame: .zero, style: .insetGrouped)
+        table.register(UITableViewCell.self, forCellReuseIdentifier: "Cell")
+        table.backgroundColor = .systemGroupedBackground
+        return table
     }()
-    
-    private let contentView: UIView = {
-        let view = UIView()
-        view.backgroundColor = .black
-        return view
-    }()
-    
-    private let dateLabel: UILabel = {
-        let label = UILabel()
-        label.font = .systemFont(ofSize: 16)
-        label.textColor = .white
-        return label
-    }()
-    
-    private let sourceLabel: UILabel = {
-        let label = UILabel()
-        label.font = .systemFont(ofSize: 16)
-        label.textColor = .white
-        return label
-    }()
-    
-    private lazy var generalCard = HealthDataCard(title: "一般检查")
-    private lazy var bloodCard = HealthDataCard(title: "血常规检查")
-    private lazy var urineCard = HealthDataCard(title: "尿常规检查")
     
     private let report: HealthReport
     private let dateFormatter: DateFormatter = {
@@ -52,11 +17,8 @@ class ReportDetailViewController: UIViewController {
         return formatter
     }()
     
-    // 分类后的数据
-    private var basicInfo: [HealthMetric] = []      // 基本信息
-    private var generalExams: [HealthMetric] = []   // 一般检查
-    private var bloodRoutine: [HealthMetric] = []   // 血常规
-    private var urineRoutine: [HealthMetric] = []   // 尿常规
+    // 分组数据
+    private var sections: [(title: String, metrics: [HealthMetric])] = []
     
     init(report: HealthReport) {
         self.report = report
@@ -68,124 +30,149 @@ class ReportDetailViewController: UIViewController {
         fatalError("init(coder:) has not been implemented")
     }
     
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        setupUI()
+    }
+    
+    private func setupUI() {
+        title = "报告详情"
+        view.backgroundColor = .systemGroupedBackground
+        
+        view.addSubview(tableView)
+        tableView.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            tableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
+        
+        tableView.delegate = self
+        tableView.dataSource = self
+    }
+    
     private func categorizeMetrics() {
+        // 基本信息
+        sections.append((
+            title: "基本信息",
+            metrics: [
+                HealthMetric(
+                    type: "检查日期",
+                    value: dateFormatter.string(from: report.date),
+                    unit: "",
+                    reference: "",
+                    originalText: "",
+                    category: .other
+                ),
+                HealthMetric(
+                    type: "数据来源",
+                    value: report.source.rawValue,
+                    unit: "",
+                    reference: "",
+                    originalText: "",
+                    category: .other
+                )
+            ]
+        ))
+        
+        // 分类指标
+        var generalMetrics: [HealthMetric] = []
+        var bloodMetrics: [HealthMetric] = []
+        var urineMetrics: [HealthMetric] = []
+        
         for metric in report.metrics {
             switch metric.category {
             case .general:
-                generalExams.append(metric)
+                generalMetrics.append(metric)
             case .blood:
-                bloodRoutine.append(metric)
+                bloodMetrics.append(metric)
             case .urine:
-                urineRoutine.append(metric)
+                urineMetrics.append(metric)
             case .other:
-                // 根据类型判断
                 if metric.type.contains("(") && metric.type.contains(")") {
-                    bloodRoutine.append(metric)
+                    bloodMetrics.append(metric)
                 } else {
-                    generalExams.append(metric)
+                    generalMetrics.append(metric)
                 }
             }
         }
         
         // 按名称排序
-        bloodRoutine.sort { $0.type < $1.type }
-        urineRoutine.sort { $0.type < $1.type }
-        generalExams.sort { $0.type < $1.type }
+        generalMetrics.sort { $0.type < $1.type }
+        bloodMetrics.sort { $0.type < $1.type }
+        urineMetrics.sort { $0.type < $1.type }
+        
+        // 添加非空分组
+        if !generalMetrics.isEmpty {
+            sections.append((title: "一般检查", metrics: generalMetrics))
+        }
+        if !bloodMetrics.isEmpty {
+            sections.append((title: "血常规检查", metrics: bloodMetrics))
+        }
+        if !urineMetrics.isEmpty {
+            sections.append((title: "尿常规检查", metrics: urineMetrics))
+        }
+    }
+}
+
+// MARK: - UITableViewDataSource
+extension ReportDetailViewController: UITableViewDataSource {
+    func numberOfSections(in tableView: UITableView) -> Int {
+        return sections.count
     }
     
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        setupUI()
-        loadData()
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return sections[section].metrics.count
     }
     
-    private func setupUI() {
-        title = "报告详情"
-        view.backgroundColor = .black
-        
-        // Setup scroll view
-        view.addSubview(scrollView)
-        scrollView.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-        ])
-        
-        // Setup content view
-        scrollView.addSubview(contentView)
-        contentView.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            contentView.topAnchor.constraint(equalTo: scrollView.topAnchor),
-            contentView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
-            contentView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
-            contentView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
-            contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor)
-        ])
-        
-        // Setup basic info
-        let basicInfoStack = UIStackView(arrangedSubviews: [dateLabel, sourceLabel])
-        basicInfoStack.axis = .vertical
-        basicInfoStack.spacing = 8
-        basicInfoStack.backgroundColor = UIColor(white: 1.0, alpha: 0.1)
-        basicInfoStack.layer.cornerRadius = 12
-        basicInfoStack.layoutMargins = UIEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
-        basicInfoStack.isLayoutMarginsRelativeArrangement = true
-        
-        // Add all views to content view
-        let mainStack = UIStackView(arrangedSubviews: [
-            basicInfoStack,
-            generalCard,
-            bloodCard,
-            urineCard
-        ])
-        mainStack.axis = .vertical
-        mainStack.spacing = 20
-        mainStack.layoutMargins = UIEdgeInsets(top: 20, left: 20, bottom: 20, right: 20)
-        mainStack.isLayoutMarginsRelativeArrangement = true
-        
-        contentView.addSubview(mainStack)
-        mainStack.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            mainStack.topAnchor.constraint(equalTo: contentView.topAnchor),
-            mainStack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            mainStack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            mainStack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
-        ])
+    func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
+        return sections[section].title
     }
     
-    private func loadData() {
-        // Set basic info
-        dateLabel.text = "检查日期：\(dateFormatter.string(from: report.date))"
-        sourceLabel.text = "数据来源：\(report.source.rawValue)"
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
+        let metric = sections[indexPath.section].metrics[indexPath.row]
         
-        // Clear existing data
-        generalCard.clearMetrics()
-        bloodCard.clearMetrics()
-        urineCard.clearMetrics()
+        var content = cell.defaultContentConfiguration()
+        content.text = metric.type
         
-        // Load new data
-        for metric in report.metrics {
-            switch metric.category {
-            case .general:
-                generalCard.addMetric(metric)
-            case .blood:
-                bloodCard.addMetric(metric)
-            case .urine:
-                urineCard.addMetric(metric)
-            case .other:
-                if metric.type.contains("(") && metric.type.contains(")") {
-                    bloodCard.addMetric(metric)
-                } else {
-                    generalCard.addMetric(metric)
-                }
-            }
+        // 格式化值和单位
+        var detailText = "\(metric.value)"
+        if !metric.unit.isEmpty {
+            detailText += " \(metric.unit)"
+        }
+        if !metric.hint.isEmpty {
+            detailText += " (\(metric.hint))"
+        }
+        if !metric.reference.isEmpty {
+            detailText += "\n参考范围: \(metric.reference)"
         }
         
-        // Hide empty cards
-        generalCard.isHidden = report.metrics.filter { $0.category == .general }.isEmpty
-        bloodCard.isHidden = report.metrics.filter { $0.category == .blood }.isEmpty
-        urineCard.isHidden = report.metrics.filter { $0.category == .urine }.isEmpty
+        content.secondaryText = detailText
+        content.secondaryTextProperties.color = getHintColor(metric.hint)
+        content.secondaryTextProperties.numberOfLines = 0
+        
+        cell.contentConfiguration = content
+        cell.backgroundColor = .systemBackground
+        return cell
+    }
+    
+    private func getHintColor(_ hint: String) -> UIColor {
+        switch hint {
+        case "偏高":
+            return .systemRed
+        case "偏低":
+            return .systemBlue
+        default:
+            return .secondaryLabel
+        }
+    }
+}
+
+// MARK: - UITableViewDelegate
+extension ReportDetailViewController: UITableViewDelegate {
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        tableView.deselectRow(at: indexPath, animated: true)
     }
 }
