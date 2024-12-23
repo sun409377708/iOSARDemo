@@ -58,7 +58,7 @@ class BodyViewController: UIViewController {
     }()
     
     private let segmentedControl: UISegmentedControl = {
-        let items = ["一般检查", "血常规", "尿常规"]
+        let items = ["常规项", "血常规", "尿常规"]
         let control = UISegmentedControl(items: items)
         control.selectedSegmentIndex = 0
         control.backgroundColor = UIColor(hex: "#00F5FF").withAlphaComponent(0.1)

@@ -114,6 +114,26 @@ class ReportDetailViewController: UIViewController {
             sections.append((title: "尿常规检查", metrics: urineMetrics))
         }
     }
+    
+    private func isValueOutOfRange(_ metric: HealthMetric) -> Bool {
+        // 如果没有参考范围，返回 false
+        guard !metric.reference.isEmpty else { return false }
+        
+        // 如果值不是数字，检查是否为阳性或异常
+        guard let value = Double(metric.value) else {
+            return metric.value == "阳性" || metric.value == "异常"
+        }
+        
+        // 解析参考范围
+        let components = metric.reference.components(separatedBy: "-")
+        guard components.count == 2,
+              let min = Double(components[0].trimmingCharacters(in: .whitespaces)),
+              let max = Double(components[1].trimmingCharacters(in: .whitespaces)) else {
+            return false
+        }
+        
+        return value < min || value > max
+    }
 }
 
 // MARK: - UITableViewDataSource
@@ -150,22 +170,47 @@ extension ReportDetailViewController: UITableViewDataSource {
         }
         
         content.secondaryText = detailText
-        content.secondaryTextProperties.color = getHintColor(metric.hint)
+        
+        // 设置颜色
+        if indexPath.section == 0 {
+            // 基本信息使用默认颜色
+            content.secondaryTextProperties.color = .secondaryLabel
+        } else {
+            // 检查结果使用状态颜色
+            content.secondaryTextProperties.color = getMetricColor(metric)
+        }
         content.secondaryTextProperties.numberOfLines = 0
         
         cell.contentConfiguration = content
-        cell.backgroundColor = .systemBackground
+        
+        // 设置背景色
+        if isValueOutOfRange(metric) {
+            cell.backgroundColor = UIColor.systemRed.withAlphaComponent(0.1)
+        } else {
+            cell.backgroundColor = .systemBackground
+        }
+        
         return cell
     }
     
-    private func getHintColor(_ hint: String) -> UIColor {
-        switch hint {
+    private func getMetricColor(_ metric: HealthMetric) -> UIColor {
+        // 如果有明确的提示，优先使用提示的颜色
+        switch metric.hint {
         case "偏高":
             return .systemRed
         case "偏低":
             return .systemBlue
+        case "异常", "阳性":
+            return .systemOrange
+        case "正常", "阴性":
+            return .systemGreen
         default:
-            return .secondaryLabel
+            // 如果没有提示，检查是否超出范围
+            if isValueOutOfRange(metric) {
+                return .systemRed
+            } else {
+                return .secondaryLabel
+            }
         }
     }
 }

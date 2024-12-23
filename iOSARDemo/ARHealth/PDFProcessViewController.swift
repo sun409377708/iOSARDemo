@@ -12,14 +12,6 @@ class PDFProcessViewController: UIViewController {
         return view
     }()
     
-    private let tableView: UITableView = {
-        let table = UITableView(frame: .zero, style: .grouped)
-        table.register(UITableViewCell.self, forCellReuseIdentifier: "Cell")
-        table.backgroundColor = .systemBackground
-        table.isHidden = true
-        return table
-    }()
-    
     private let progressView: UIProgressView = {
         let progress = UIProgressView(progressViewStyle: .default)
         progress.progressTintColor = .systemBlue
@@ -42,10 +34,29 @@ class PDFProcessViewController: UIViewController {
         return indicator
     }()
     
+    private let completeButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setTitle("查看详情", for: .normal)
+        button.backgroundColor = .systemBlue
+        button.setTitleColor(.white, for: .normal)
+        button.layer.cornerRadius = 8
+        button.isHidden = true
+        return button
+    }()
+    
+    private let tableView: UITableView = {
+        let table = UITableView(frame: .zero, style: .grouped)
+        table.register(UITableViewCell.self, forCellReuseIdentifier: "Cell")
+        table.backgroundColor = .systemBackground
+        table.isHidden = true
+        return table
+    }()
+    
     private var pdfURL: URL
     private var extractedData: [HealthData] = []
     private var debugLog: String = ""
     private var recognizedLines: [[RecognizedTableRow]] = []
+    private var currentReport: HealthReport?
     
     struct RecognizedTableRow {
         var item: String
@@ -101,7 +112,7 @@ class PDFProcessViewController: UIViewController {
     private func setupUI() {
         view.backgroundColor = .systemBackground
         
-        [pdfView, tableView, progressView, statusLabel, activityIndicator].forEach {
+        [pdfView, tableView, progressView, statusLabel, activityIndicator, completeButton].forEach {
             $0.translatesAutoresizingMaskIntoConstraints = false
             view.addSubview($0)
         }
@@ -117,19 +128,26 @@ class PDFProcessViewController: UIViewController {
             tableView.topAnchor.constraint(equalTo: pdfView.bottomAnchor),
             tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            tableView.bottomAnchor.constraint(equalTo: safeArea.bottomAnchor),
+            tableView.bottomAnchor.constraint(equalTo: completeButton.topAnchor, constant: -20),
             
-            progressView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            progressView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 40),
-            progressView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -40),
+            progressView.topAnchor.constraint(equalTo: pdfView.bottomAnchor, constant: 20),
+            progressView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
+            progressView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
             
-            statusLabel.bottomAnchor.constraint(equalTo: progressView.topAnchor, constant: -20),
+            statusLabel.topAnchor.constraint(equalTo: progressView.bottomAnchor, constant: 10),
             statusLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
             statusLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
             
             activityIndicator.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            activityIndicator.bottomAnchor.constraint(equalTo: statusLabel.topAnchor, constant: -20)
+            activityIndicator.topAnchor.constraint(equalTo: statusLabel.bottomAnchor, constant: 20),
+            
+            completeButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
+            completeButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+            completeButton.bottomAnchor.constraint(equalTo: safeArea.bottomAnchor, constant: -20),
+            completeButton.heightAnchor.constraint(equalToConstant: 44)
         ])
+        
+        completeButton.addTarget(self, action: #selector(completeButtonTapped), for: .touchUpInside)
         
         tableView.delegate = self
         tableView.dataSource = self
@@ -363,6 +381,7 @@ class PDFProcessViewController: UIViewController {
             }
             
             self?.tableView.reloadData()
+            self?.processingCompleted(with: report)
         }
     }
     
@@ -384,19 +403,14 @@ class PDFProcessViewController: UIViewController {
         statusLabel.text = "正在处理第 \(pageNumber)/\(total) 页..."
     }
     
-    private func processingCompleted() {
-        activityIndicator.stopAnimating()
-        progressView.isHidden = true
-        statusLabel.isHidden = true
-        
-        if extractedData.isEmpty {
-            print("Debug Log:\n\(debugLog)")
-            showError("未能提取到健康数据。请确保PDF文件包含可识别的健康指标。")
-            return
+    private func processingCompleted(with report: HealthReport) {
+        DispatchQueue.main.async { [weak self] in
+            self?.activityIndicator.stopAnimating()
+            self?.progressView.isHidden = true
+            self?.statusLabel.text = "处理完成"
+            self?.currentReport = report
+            self?.completeButton.isHidden = false
         }
-        
-        tableView.isHidden = false
-        tableView.reloadData()
     }
     
     private func showError(_ message: String) {
@@ -405,6 +419,12 @@ class PDFProcessViewController: UIViewController {
             self?.dismiss(animated: true)
         })
         present(alert, animated: true)
+    }
+    
+    @objc private func completeButtonTapped() {
+        guard let report = currentReport else { return }
+        let detailVC = ReportDetailViewController(report: report)
+        navigationController?.pushViewController(detailVC, animated: true)
     }
 }
 
