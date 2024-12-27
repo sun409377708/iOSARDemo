@@ -19,6 +19,8 @@
 		7730F2762D1419750058D789 /* UIColor+Hex.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7730F2752D1419750058D789 /* UIColor+Hex.swift */; };
 		7730F2802D14352F0058D789 /* CircularProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7730F27F2D14352F0058D789 /* CircularProgressView.swift */; };
 		7730F2822D15020B0058D789 /* HealthReportManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7730F2812D15020B0058D789 /* HealthReportManager.swift */; };
+		7730F2842D1D61DA0058D789 /* NewViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7730F2832D1D61D90058D789 /* NewViewController.swift */; };
+		7730F2862D1D622A0058D789 /* ren.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 7730F2852D1D622A0058D789 /* ren.usdz */; };
 		77845D1A2D0C110100FAF857 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77845D192D0C110100FAF857 /* AppDelegate.swift */; };
 		77845D1C2D0C110100FAF857 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77845D1B2D0C110100FAF857 /* SceneDelegate.swift */; };
 		77845D212D0C110100FAF857 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 77845D1F2D0C110100FAF857 /* Main.storyboard */; };
@@ -46,6 +48,8 @@
 		7730F2752D1419750058D789 /* UIColor+Hex.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "UIColor+Hex.swift"; sourceTree = "<group>"; };
 		7730F27F2D14352F0058D789 /* CircularProgressView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CircularProgressView.swift; sourceTree = "<group>"; };
 		7730F2812D15020B0058D789 /* HealthReportManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthReportManager.swift; sourceTree = "<group>"; };
+		7730F2832D1D61D90058D789 /* NewViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NewViewController.swift; sourceTree = "<group>"; };
+		7730F2852D1D622A0058D789 /* ren.usdz */ = {isa = PBXFileReference; lastKnownFileType = file.usdz; path = ren.usdz; sourceTree = "<group>"; };
 		77845D162D0C110100FAF857 /* iOSARDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iOSARDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		77845D192D0C110100FAF857 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		77845D1B2D0C110100FAF857 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
@@ -141,6 +145,7 @@
 				770A826A2D127BF900E848FB /* HistoryReportsViewController.swift */,
 				770A82682D127A5500E848FB /* TesseractViewController.swift */,
 				77845D342D0C173600FAF857 /* HomeViewController.swift */,
+				7730F2832D1D61D90058D789 /* NewViewController.swift */,
 				77845D562D10223100FAF857 /* BodyViewController.swift */,
 			);
 			path = ARHealth;
@@ -149,6 +154,7 @@
 		77845D402D0C287300FAF857 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				7730F2852D1D622A0058D789 /* ren.usdz */,
 				770A82622D103E3900E848FB /* ball_girl.usdz */,
 			);
 			path = Models;
@@ -240,6 +246,7 @@
 				77845D232D0C110300FAF857 /* Assets.xcassets in Resources */,
 				77845D212D0C110100FAF857 /* Main.storyboard in Resources */,
 				770A82632D103E3900E848FB /* ball_girl.usdz in Resources */,
+				7730F2862D1D622A0058D789 /* ren.usdz in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -294,6 +301,7 @@
 			files = (
 				77845D572D10223100FAF857 /* BodyViewController.swift in Sources */,
 				7730F2822D15020B0058D789 /* HealthReportManager.swift in Sources */,
+				7730F2842D1D61DA0058D789 /* NewViewController.swift in Sources */,
 				77845D372D0C17ED00FAF857 /* PDFProcessViewController.swift in Sources */,
 				77845D1A2D0C110100FAF857 /* AppDelegate.swift in Sources */,
 				77845D352D0C173600FAF857 /* HomeViewController.swift in Sources */,

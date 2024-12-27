@@ -83,16 +83,29 @@ class HomeViewController: UIViewController, UIDocumentPickerDelegate {
         return button
     }()
     
+    private let newPageButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setTitle("新页面", for: .normal)
+        button.setImage(UIImage(systemName: "arrow.right.circle"), for: .normal)
+        button.backgroundColor = .systemOrange
+        button.setTitleColor(.white, for: .normal)
+        button.tintColor = .white
+        button.layer.cornerRadius = 10
+        button.clipsToBounds = true
+        return button
+    }()
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
+        setupActions()
         navigationController?.navigationBar.isHidden = true
     }
     
     private func setupUI() {
         view.backgroundColor = .systemBackground
         
-        [titleLabel, descriptionLabel, pdfButton, tesseractButton, historyButton, bodyModelButton].forEach {
+        [titleLabel, descriptionLabel, pdfButton, tesseractButton, historyButton, bodyModelButton, newPageButton].forEach {
             $0.translatesAutoresizingMaskIntoConstraints = false
             view.addSubview($0)
         }
@@ -121,16 +134,25 @@ class HomeViewController: UIViewController, UIDocumentPickerDelegate {
             historyButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
             historyButton.heightAnchor.constraint(equalToConstant: 50),
             
-            bodyModelButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -40),
+            bodyModelButton.bottomAnchor.constraint(equalTo: newPageButton.topAnchor, constant: -20),
             bodyModelButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
             bodyModelButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
-            bodyModelButton.heightAnchor.constraint(equalToConstant: 50)
+            bodyModelButton.heightAnchor.constraint(equalToConstant: 50),
+            
+            newPageButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -40),
+            newPageButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
+            newPageButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+            newPageButton.heightAnchor.constraint(equalToConstant: 50)
         ])
         
         pdfButton.addTarget(self, action: #selector(pdfButtonTapped), for: .touchUpInside)
         tesseractButton.addTarget(self, action: #selector(tesseractButtonTapped), for: .touchUpInside)
         historyButton.addTarget(self, action: #selector(historyButtonTapped), for: .touchUpInside)
         bodyModelButton.addTarget(self, action: #selector(bodyModelButtonTapped), for: .touchUpInside)
+    }
+    
+    private func setupActions() {
+        newPageButton.addTarget(self, action: #selector(newPageButtonTapped), for: .touchUpInside)
     }
     
     @objc private func pdfButtonTapped() {
@@ -156,6 +178,11 @@ class HomeViewController: UIViewController, UIDocumentPickerDelegate {
     @objc private func bodyModelButtonTapped() {
         let bodyVC = BodyViewController()
         navigationController?.pushViewController(bodyVC, animated: true)
+    }
+    
+    @objc private func newPageButtonTapped() {
+        let newVC = NewViewController()
+        navigationController?.pushViewController(newVC, animated: true)
     }
     
     // MARK: - UIDocumentPickerDelegate
