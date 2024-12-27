@@ -8,6 +8,11 @@ class NewViewController: UIViewController {
     private var modelNode: SCNNode!
     private var lastHighlightedNode: SCNNode?  // 跟踪上一个高亮的节点
     private var originalMaterials: [SCNNode: [SCNMaterial]] = [:] // 存储原始材质
+    private var clonedNode: SCNNode? // 存储复制出来的器官节点
+    
+    // 添加一个属性来存储初始相机位置
+    private var initialCameraPosition: SCNVector3?
+    private var initialCameraForward: SCNVector3?
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -115,15 +120,15 @@ class NewViewController: UIViewController {
                 sceneView.scene?.rootNode.addChildNode(modelNode)
                 
                 // 添加缓慢旋转动画
-                let rotationAnimation = CABasicAnimation(keyPath: "rotation")
-                rotationAnimation.toValue = NSValue(scnVector4: SCNVector4(x: 0, y: 1, z: 0, w: Float.pi * 2))
-                rotationAnimation.duration = 20
-                rotationAnimation.repeatCount = .infinity
-                modelNode.addAnimation(rotationAnimation, forKey: "rotation")
+                addRotationAnimation(to: modelNode)
                 
                 // 打印节点结构
                 print("根节点名称: \(modelNode.name ?? "unnamed")")
                 printNodeHierarchy(modelNode, level: 0)
+                
+                // 保存初始相机位置和方向
+                initialCameraPosition = sceneView.pointOfView?.position
+                initialCameraForward = sceneView.pointOfView?.worldFront
             }
         } catch {
             print("加载模型失败: \(error.localizedDescription)")
@@ -155,11 +160,11 @@ class NewViewController: UIViewController {
         
         // 进行命中测试，设置为可以检测到内部节点
         let hitResults = sceneView.hitTest(location, options: [
-            .searchMode: SCNHitTestSearchMode.all.rawValue,  // 改为 .all 来检测所有节点
+            .searchMode: SCNHitTestSearchMode.all.rawValue,  // 检测所有节点
             .ignoreHiddenNodes: false,  // 不忽略隐藏节点
-            .boundingBoxOnly: false,
-            .ignoreChildNodes: false,  // 不忽略子节点
-            .sortResults: true  // 按距离排序
+            .boundingBoxOnly: false,    // 使用精确的几何体检测
+            .ignoreChildNodes: false,   // 不忽略子节点
+            .sortResults: true          // 按距离排序
         ])
         
         // 遍历所有命中的结果，找到第一个不是 Body 的器官
@@ -182,27 +187,100 @@ class NewViewController: UIViewController {
                let geometryNode = targetNode.childNodes.first(where: { $0.name?.hasSuffix("_geometry") ?? false }) {
                 print("选中的器官: \(targetNode.name ?? "unnamed")")
                 
-                // 恢复之前高亮的节点
-                if let lastNode = lastHighlightedNode,
-                   let lastGeometryNode = lastNode.childNodes.first(where: { $0.name?.hasSuffix("_geometry") ?? false }),
-                   lastNode != targetNode {
-                    restoreOriginalMaterial(for: lastGeometryNode)
-                }
+                // 停止人体模型的旋转动画
+                modelNode.removeAnimation(forKey: "rotation")
                 
                 // 如果点击的是同一个节点，取消高亮
                 if lastHighlightedNode == targetNode {
                     restoreOriginalMaterial(for: geometryNode)
                     lastHighlightedNode = nil
+                    // 移除克隆的节点
+                    clonedNode?.removeFromParentNode()
+                    clonedNode = nil
+                    
+                    // 恢复人体模型的旋转动画
+                    addRotationAnimation(to: modelNode)
                 } else {
-                    // 高亮新节点
-                    highlightNode(geometryNode)
-                    lastHighlightedNode = targetNode
+                    // 恢复之前高亮的节点
+                    if let lastNode = lastHighlightedNode,
+                       let lastGeometryNode = lastNode.childNodes.first(where: { $0.name?.hasSuffix("_geometry") ?? false }),
+                       lastNode != targetNode {
+                        restoreOriginalMaterial(for: lastGeometryNode)
+                        // 移除之前克隆的节点
+                        clonedNode?.removeFromParentNode()
+                        clonedNode = nil
+                    }
+                    
+                    // 先创建克隆体
+                    cloneAndShowOrgan(targetNode)
+                    
+                    // 延迟一帧再执行高亮，避免动画影响克隆体位置
+                    DispatchQueue.main.async {
+                        // 高亮新节点
+                        self.highlightNode(geometryNode)
+                        self.lastHighlightedNode = targetNode
+                    }
                 }
                 
                 // 找到合适的节点后退出循环
                 break
             }
         }
+    }
+    
+    // 添加新的辅助方法来添加旋转动画
+    private func addRotationAnimation(to node: SCNNode) {
+        let rotationAnimation = CABasicAnimation(keyPath: "rotation")
+        rotationAnimation.toValue = NSValue(scnVector4: SCNVector4(x: 0, y: 1, z: 0, w: Float.pi * 2))
+        rotationAnimation.duration = 15
+        rotationAnimation.repeatCount = .infinity
+        node.addAnimation(rotationAnimation, forKey: "rotation")
+    }
+    
+    private func cloneAndShowOrgan(_ organNode: SCNNode) {
+        // 移除之前的克隆节点（如果有）
+        clonedNode?.removeFromParentNode()
+        
+        // 获取原始几何体节点
+        guard let originalGeometryNode = organNode.childNodes.first(where: { $0.name?.hasSuffix("_geometry") ?? false }),
+              let originalGeometry = originalGeometryNode.geometry else {
+            return
+        }
+        
+        // 创建几何体的副本
+        let clonedGeometry = originalGeometry.copy() as! SCNGeometry
+        clonedGeometry.materials = originalGeometry.materials.map { $0.copy() as! SCNMaterial }
+        
+        // 创建新的节点
+        let clonedOrgan = SCNNode(geometry: clonedGeometry)
+        clonedOrgan.name = organNode.name
+        
+        // 设置固定的位置（相对于场景原点）
+        let fixedPosition = SCNVector3(0, -0.8, 1.0)  // x: 中心, y: 降低位置, z: 向前
+        clonedOrgan.position = fixedPosition
+        
+        // 设置克隆节点的朝向（面向相机）
+        clonedOrgan.constraints = [SCNBillboardConstraint()]
+        
+        // 设置克隆节点的缩放
+        clonedOrgan.scale = SCNVector3(0.0125, 0.0125, 0.0125)
+        
+        // 添加旋转动画
+        let rotationAnimation = CABasicAnimation(keyPath: "rotation")
+        rotationAnimation.toValue = NSValue(scnVector4: SCNVector4(x: 0, y: 1, z: 0, w: Float.pi * 2))
+        rotationAnimation.duration = 10
+        rotationAnimation.repeatCount = .infinity
+        clonedOrgan.addAnimation(rotationAnimation, forKey: "rotation")
+        
+        // 存储克隆的节点
+        clonedNode = clonedOrgan
+        
+        // 直接添加到场景的根节点
+        sceneView.scene?.rootNode.addChildNode(clonedOrgan)
+        
+        // 添加淡入动画
+        clonedOrgan.opacity = 0
+        clonedOrgan.runAction(SCNAction.fadeIn(duration: 0.3))
     }
     
     private func highlightNode(_ node: SCNNode) {
